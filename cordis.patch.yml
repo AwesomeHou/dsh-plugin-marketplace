@@ -1,0 +1,13 @@
+# dsh-plugin-marketplace bundle patch layer.
+#
+# This bundle contributes one host row: the plugin's own package. The Loader
+# imports `dsh-plugin-marketplace` (resolved from the profile's node_modules
+# after `dsh plugin --profile web add`), which runs the Host half — GitHub
+# topic sync + the `/api/market/list` HTTP feed.
+#
+# client-modules independently scans this same loader entry for a package that
+# declares `dsh.client` and exports `./client`, which is how the browser half
+# (the "插件市场" settings page) is discovered and injected into the boot graph.
+- insert:
+    - id: plugin-market
+      name: 'dsh-plugin-marketplace'
