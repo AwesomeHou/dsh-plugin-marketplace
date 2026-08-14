@@ -26,28 +26,16 @@
 ### 手动安装
 
 ```sh
-# 从 GitHub 仓库安装
 dsh plugin --profile web add https://github.com/AwesomeHou/dsh-plugin-marketplace
-
-# 或从本地克隆路径安装
-dsh plugin --profile web add <本仓库路径>
 ```
 
 安装后需**重启 harness** 才能生效。
 
 ### 让 Agent 安装
 
-本插件给 agent 注册了 `market_install` 工具，你可以直接在对话里让它装：
-
-> "帮我安装 AwesomeHou/dsh-plugin-marketplace"
-
-或等价地（`owner/repo` 简写）：
-
-> "帮我安装这个插件：AwesomeHou/dsh-plugin-marketplace"
-
-Agent 会调用 `market_install(spec)`，实际执行 `dsh plugin --profile web add -w <spec>`，并把安装结果（含"需要重启"提示）反馈给你。如果你想在安装前先看看它能做什么，可以先让它跑 `market_search(q)` 确认后再装。
-
-> 注：`market_install` 会校验 spec 中的 shell 元字符并拒绝可疑输入；安装任何第三方插件前建议先 `market_search` 了解仓库内容。
+```
+帮我安装这个插件 https://github.com/AwesomeHou/dsh-plugin-marketplace
+```
 
 ## 结构
 

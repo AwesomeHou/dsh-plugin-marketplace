@@ -39,34 +39,16 @@ tools so the agent itself can search and install plugins.
 ### Manual install
 
 ```sh
-# From the GitHub repository
 dsh plugin --profile web add https://github.com/AwesomeHou/dsh-plugin-marketplace
-
-# Or from a local clone path
-dsh plugin --profile web add <path-to-this-repo>
 ```
 
 Requires a harness restart to take effect.
 
 ### Let the agent install it
 
-This plugin registers the `market_install` tool for the agent, so you can just
-ask in the chat:
-
-> "Install AwesomeHou/dsh-plugin-marketplace for me"
-
-or equivalently with the `owner/repo` shorthand:
-
-> "Install the plugin AwesomeHou/dsh-plugin-marketplace"
-
-The agent calls `market_install(spec)`, which runs
-`dsh plugin --profile web add -w <spec>` and reports the result (including the
-"restart required" note). If you want to inspect a plugin before installing,
-have the agent run `market_search(q)` first.
-
-> Note: `market_install` validates the spec for shell metacharacters and
-> refuses suspicious input; always `market_search` a third-party plugin before
-> installing it.
+```
+Install this plugin for me: https://github.com/AwesomeHou/dsh-plugin-marketplace
+```
 
 ## How it is wired
 
