@@ -2,6 +2,8 @@
 
 English | [中文](README.md)
 
+[![GitHub](https://img.shields.io/badge/GitHub-AwesomeHou%2Fdsh--plugin--marketplace-181717?logo=github)](https://github.com/AwesomeHou/dsh-plugin-marketplace)
+
 A **permanent** DeepSeek Harness plugin that turns the GitHub
 [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic (1800+ repos) into a
 **plugin marketplace** — a tab inside **设置 → 插件**, plus a pair of model
@@ -34,11 +36,37 @@ tools so the agent itself can search and install plugins.
 
 ## Install
 
+### Manual install
+
 ```sh
+# From the GitHub repository
+dsh plugin --profile web add https://github.com/AwesomeHou/dsh-plugin-marketplace
+
+# Or from a local clone path
 dsh plugin --profile web add <path-to-this-repo>
 ```
 
 Requires a harness restart to take effect.
+
+### Let the agent install it
+
+This plugin registers the `market_install` tool for the agent, so you can just
+ask in the chat:
+
+> "Install AwesomeHou/dsh-plugin-marketplace for me"
+
+or equivalently with the `owner/repo` shorthand:
+
+> "Install the plugin AwesomeHou/dsh-plugin-marketplace"
+
+The agent calls `market_install(spec)`, which runs
+`dsh plugin --profile web add -w <spec>` and reports the result (including the
+"restart required" note). If you want to inspect a plugin before installing,
+have the agent run `market_search(q)` first.
+
+> Note: `market_install` validates the spec for shell metacharacters and
+> refuses suspicious input; always `market_search` a third-party plugin before
+> installing it.
 
 ## How it is wired
 
