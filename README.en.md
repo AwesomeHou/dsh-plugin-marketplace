@@ -7,6 +7,10 @@ A **permanent** DeepSeek Harness plugin that turns the GitHub
 **plugin marketplace** — a tab inside **设置 → 插件**, plus a pair of model
 tools so the agent itself can search and install plugins.
 
+![Marketplace screenshot](screenshot.png)
+
+*The plugin marketplace: search, browse, one-click install.*
+
 ## Features
 
 - **Paginated feed** — the full topic is served page by page (default 50,

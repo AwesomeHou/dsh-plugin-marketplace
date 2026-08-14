@@ -5,6 +5,10 @@
 一个 DeepSeek Harness 的**永久插件**，把 GitHub
 [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic（1800+ 仓库）变成**插件市场**——既是 **设置 → 插件** 里的一个标签页，也提供一组模型工具，让 agent 自己就能搜索并安装插件。
 
+![插件市场截图](screenshot.png)
+
+*插件市场：搜索、浏览、一键安装。*
+
 ## 功能
 
 - **全量分页** — 完整 topic 按页拉取（默认 50 / 最大 100），UI 带"加载更多"按钮。不再有"只看 50 个"的硬限制：`total` 反映真实的 `total_count`。
