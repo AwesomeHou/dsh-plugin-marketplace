@@ -17,8 +17,10 @@ model tools that let the agent itself search and install plugins.
   - `market_search(q?, page?, perPage?)` — JSON list of topic repos
     (full name, stars, language, description, URL).
   - `market_install(spec)` — install into the `web` profile via
-    `dsh plugin --profile web add <spec>`. Validates the spec against shell
+    `dsh plugin --profile web add -w <spec>`. Validates the spec against shell
     metacharacters before running; reports that a harness restart is required.
+- **One-click install** — every marketplace card has an **安装** button that
+  POSTs `/api/market/install` and shows an installing/installed/failed state.
 - **Inside the Plugins settings** — registers `settings.plugins.tab` with id
   `market`, so the marketplace is a tab beside the shipped "插件配置" and
   "插件列表".
@@ -37,7 +39,7 @@ Requires a harness restart to take effect.
 |---|---|---|
 | Bundle manifest | `package.json` | `dsh.bundle.patch` (host layer) + `dsh.client` (browser module) |
 | Patch layer | `cordis.patch.yml` | Inserts the plugin's own host row into the Loader tree |
-| Host half | `lib/index.js` | GitHub paginated sync + `/api/market/list` feed + `market_search`/`market_install` tools |
+| Host half | `lib/index.js` | GitHub paginated sync + `/api/market/list` + `/api/market/install` + `market_search`/`market_install` tools |
 | Client half | `lib/client.js` | `__ModuleLoader__` bundle: Plugins-settings tab + search + load-more |
 
 Data flows over the same-origin HTTP endpoint (`/api/market/list`) the Host
