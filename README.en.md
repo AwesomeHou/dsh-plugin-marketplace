@@ -5,13 +5,14 @@ English | [中文](README.md)
 [![GitHub](https://img.shields.io/badge/GitHub-AwesomeHou%2Fdsh--plugin--marketplace-181717?logo=github)](https://github.com/AwesomeHou/dsh-plugin-marketplace)
 
 A **permanent** DeepSeek Harness plugin that turns the GitHub
-[`dsh-plugin`](https://github.com/topics/dsh-plugin) topic (1800+ repos) into a
+[`dsh-plugin`](https://github.com/topics/dsh-plugin) topic  into a
 **plugin marketplace** — a tab inside **设置 → 插件**, plus a pair of model
 tools so the agent itself can search and install plugins.
 
-![Marketplace screenshot](screenshot.png)
+![Marketplace screenshot](screenshot1.png)
+![Marketplace screenshot](screenshot2.png)
 
-*The plugin marketplace: search, browse, one-click install.*
+*The plugin marketplace: search, browse, one-click install, update.*
 
 ## Features
 
