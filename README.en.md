@@ -27,9 +27,10 @@ tools so the agent itself can search and install plugins.
   - `market_install(spec)` — install into the `web` profile via
     `dsh plugin --profile web add -w <spec>`. Validates the spec against shell
     metacharacters before running; reports that a harness restart is required.
-  - `market_installed()` — list plugins installed in the `web` profile:
-    built-in vs user-installed, enabled state, installed/latest versions and
-    whether an update is available (including this marketplace's own status).
+  - `market_installed()` — list the **third-party** plugins installed in the
+    `web` profile: enabled state, installed/latest versions and whether an
+    update is available (including this marketplace's own status). Built-ins
+    are not listed.
   - `market_update(name)` — update one installed plugin to its latest version
     (restart required to take effect).
 - **One-click install** — every marketplace card has an **安装** (Install)
@@ -42,7 +43,8 @@ tools so the agent itself can search and install plugins.
 - **Built-in vs user-installed** — packages in `dsh.profile.bundles` that come
   from the profile template are **built-in** (ship with the harness; cannot be
   disabled/uninstalled); packages later added to `dependencies` are
-  **user-installed**.
+  **user-installed**. The **已安装** tab lists only user-installed
+  (third-party) plugins — built-ins are not shown, and the page states this.
 - **Disable / uninstall user-installed plugins** — **关闭 / 启用** (via
   `/api/market/set-enabled`) toggles the plugin in/out of `dsh.profile.bundles`
   (the dependency is kept); **卸载** (via `/api/market/uninstall`) runs
@@ -51,6 +53,9 @@ tools so the agent itself can search and install plugins.
 - **Self-update check** — the marketplace checks its own latest version (read
   from its GitHub repo's `package.json`). When a new version exists, a banner
   `vX → vY · 立即更新` appears at the top of both the 插件市场 and 已安装 tabs.
+- **Source disclosure** — the **插件市场** tab states its source: the GitHub
+  `dsh-plugin` topic (`github.com/topics/dsh-plugin`), synced live through the
+  GitHub Search API.
 - **Inside the Plugins settings** — registers two `settings.plugins.tab`
   entries (`market` 插件市场, `installed` 已安装) beside the shipped
   "插件配置" (Plugin config) and "插件列表" (Plugin list) tabs.
