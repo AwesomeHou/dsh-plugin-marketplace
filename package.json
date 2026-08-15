@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-marketplace",
-  "version": "0.1.0",
-  "description": "实时同步 GitHub dsh-plugin topic 的插件市场：Host 定时抓取并缓存，Web 设置页展示可搜索的插件列表。",
+  "version": "0.2.0",
+  "description": "实时同步 GitHub dsh-plugin topic 的插件市场：Host 定时抓取并缓存，Web 设置页展示可搜索的插件列表，并支持已装插件的更新 / 关闭 / 卸载与市场自更新检查。",
   "type": "module",
   "repository": {
     "type": "git",

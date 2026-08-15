@@ -27,12 +27,33 @@ tools so the agent itself can search and install plugins.
   - `market_install(spec)` — install into the `web` profile via
     `dsh plugin --profile web add -w <spec>`. Validates the spec against shell
     metacharacters before running; reports that a harness restart is required.
+  - `market_installed()` — list plugins installed in the `web` profile:
+    built-in vs user-installed, enabled state, installed/latest versions and
+    whether an update is available (including this marketplace's own status).
+  - `market_update(name)` — update one installed plugin to its latest version
+    (restart required to take effect).
 - **One-click install** — every marketplace card has an **安装** (Install)
   button that POSTs `/api/market/install` and shows
   installing/installed/failed state.
-- **Inside the Plugins settings** — registers `settings.plugins.tab` with id
-  `market`, so the marketplace sits beside the shipped "插件配置" (Plugin
-  config) and "插件列表" (Plugin list) tabs.
+- **Plugin updates (new-version hint)** — every installed plugin is compared
+  against its latest version (npm registry `latest`, or the `version` in the
+  default-branch `package.json` for GitHub-hosted plugins). Cards get a
+  **可更新** badge and an **更新** (Update) button via `/api/market/update`.
+- **Built-in vs user-installed** — packages in `dsh.profile.bundles` that come
+  from the profile template are **built-in** (ship with the harness; cannot be
+  disabled/uninstalled); packages later added to `dependencies` are
+  **user-installed**.
+- **Disable / uninstall user-installed plugins** — **关闭 / 启用** (via
+  `/api/market/set-enabled`) toggles the plugin in/out of `dsh.profile.bundles`
+  (the dependency is kept); **卸载** (via `/api/market/uninstall`) runs
+  `dsh plugin --profile web remove <name>` and drops it from the bundle layer
+  list. Both need a harness restart.
+- **Self-update check** — the marketplace checks its own latest version (read
+  from its GitHub repo's `package.json`). When a new version exists, a banner
+  `vX → vY · 立即更新` appears at the top of both the 插件市场 and 已安装 tabs.
+- **Inside the Plugins settings** — registers two `settings.plugins.tab`
+  entries (`market` 插件市场, `installed` 已安装) beside the shipped
+  "插件配置" (Plugin config) and "插件列表" (Plugin list) tabs.
 
 ## Install
 
@@ -56,10 +77,10 @@ Install this plugin for me: https://github.com/AwesomeHou/dsh-plugin-marketplace
 |---|---|---|
 | Bundle manifest | `package.json` | `dsh.bundle.patch` (host layer) + `dsh.client` (browser module) |
 | Patch layer | `cordis.patch.yml` | Inserts the plugin's own host row into the Loader tree |
-| Host half | `lib/index.js` | GitHub paginated sync + `/api/market/list` + `/api/market/install` + `market_search`/`market_install` tools |
-| Client half | `lib/client.js` | `__ModuleLoader__` bundle: Plugins-settings tab + search + load-more + one-click install |
+| Host half | `lib/index.js` | GitHub paginated sync + `/api/market/list`, `/api/market/installed`, `/api/market/update`, `/api/market/set-enabled`, `/api/market/uninstall` + `market_search`/`market_install`/`market_installed`/`market_update` tools |
+| Client half | `lib/client.js` | `__ModuleLoader__` bundle: `插件市场` / `已安装` settings tabs + search + load-more + one-click install + update / disable / enable / uninstall + self-update banner |
 
-Data flows over the same-origin HTTP endpoint (`/api/market/list`) the Host
+Data flows over the same-origin HTTP endpoints (`/api/market/*`) the Host
 half registers on `ctx.webServer` — permanent bundles have no
 `harness`/`host.call` sandbox RPC, so the browser half uses `fetch`.
 
