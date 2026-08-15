@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Test scratch profile
+.test-tmp/
+
 # Logs
 *.log
 npm-debug.log*

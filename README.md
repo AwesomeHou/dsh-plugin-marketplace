@@ -21,7 +21,7 @@
   - `market_install(spec)` — 通过 `dsh plugin --profile web add -w <spec>` 安装到 `web` profile。执行前会校验 spec 是否含 shell 元字符；完成后提示需要重启 harness。
   - `market_installed()` — 列出 `web` profile 已安装的**第三方**插件：启用状态、当前版本、最新版本与是否可更新（含市场自身的更新状态）。内置插件不在此列。
   - `market_update(name)` — 把某个已安装插件更新到最新版本（需重启 harness 生效）。
-- **一键安装** — 每个插件卡片都有 **安装** 按钮，POST `/api/market/install`，并显示 安装中 / 已安装 / 失败 状态。
+- **一键安装（异步 + 进度条）** — 每个插件卡片都有 **安装** 按钮，POST `/api/market/install` 立刻返回 `{ jobId }`（不阻塞 Web 服务），浏览器轮询 `GET /api/market/install/status?job=<id>`，卡片上实时渲染**应用商店式进度条**：阶段（解析依赖 → 下载中 → 正在安装 → 完成 / 失败 / 已取消）、百分比、已下载大小、实时下载速度、ETA 与最近日志；支持 `POST /api/market/install/cancel` 取消。安装/更新任务异步串行执行，进程树可被可靠终止（Windows `taskkill /T /F`），并有 10 分钟硬超时兜底——彻底解决旧版 `spawnSync` 阻塞事件循环、超时杀不掉进程树导致"安装中…"永久卡死的问题。
 - **更新插件（有新版本提示）** — 每个已安装插件都会对照最新版本（npm registry 的 `latest`，或 GitHub 默认分支 `package.json` 的 `version`，GitHub 插件优先）。有新版本时在卡片上标 **可更新** 并给 **更新** 按钮（`/api/market/update`）。
 - **区分内置 / 后安装** — `dsh.profile.bundles` 里来自 profile 模板的包是**内置**插件（随 harness 提供，不能关闭 / 卸载），`dependencies` 里的是**后安装**插件。**已安装**标签页只展示后安装（第三方）插件，内置插件不列出（页面顶部有声明）。
 - **后安装插件可关闭 / 卸载** — **关闭 / 启用**（`/api/market/set-enabled`）通过把它移出 / 移回 `dsh.profile.bundles` 实现（依赖保留）；**卸载**（`/api/market/uninstall`）通过 `dsh plugin --profile web remove <name>` 移除依赖并自动从 bundle 层摘除。两者都需重启 harness。
@@ -51,8 +51,8 @@ dsh plugin --profile web add https://github.com/AwesomeHou/dsh-plugin-marketplac
 |---|---|---|
 | Bundle 清单 | `package.json` | 声明 `dsh.bundle.patch`（host 层）+ `dsh.client`（浏览器模块） |
 | Patch 层 | `cordis.patch.yml` | 把插件自己的 host 行插入 Loader 树 |
-| Host 半 | `lib/index.js` | GitHub 分页同步 + `/api/market/list`、`/api/market/installed`、`/api/market/update`、`/api/market/set-enabled`、`/api/market/uninstall` + `market_search`/`market_install`/`market_installed`/`market_update` 工具 |
-| Client 半 | `lib/client.js` | `__ModuleLoader__` bundle：`插件市场` / `已安装` 两个设置标签页 + 搜索 + 加载更多 + 一键安装 + 更新 / 关闭 / 启用 / 卸载 + 市场自更新横幅 |
+| Host 半 | `lib/index.js` | GitHub 分页同步 + `/api/market/list`、`/api/market/install`（异步任务）、`/api/market/install/status`、`/api/market/install/cancel`、`/api/market/installed`、`/api/market/update`、`/api/market/set-enabled`、`/api/market/uninstall` + `market_search`/`market_install`/`market_installed`/`market_update` 工具 |
+| Client 半 | `lib/client.js` | `__ModuleLoader__` bundle：`插件市场` / `已安装` 两个设置标签页 + 搜索 + 加载更多 + 一键安装（带进度条/速度/大小/阶段/取消）+ 更新 / 关闭 / 启用 / 卸载 + 市场自更新横幅 |
 
 数据走 Host 半在 `ctx.webServer` 上注册的同源 HTTP 端点（`/api/market/*`）——永久插件没有 `harness`/`host.call` 沙箱 RPC，所以浏览器半用 `fetch`。
 
