@@ -8,13 +8,18 @@
  * Usage: node test/install-flow.test.mjs [local|github|cancel]
  */
 import { _market } from '../lib/index.js'
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import os from 'node:os'
 import { dirname, join } from 'node:path'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const ws = join(here, '..')
-const tmpHome = join(ws, '.test-tmp', 'dsh')
+// Use a SPACE-FREE base under the OS temp dir: `dsh plugin add` mangles local
+// paths containing spaces (cmd.exe argv), so a fixture under the workspace
+// (which has a space in its name) would not link correctly.
+const tmpBase = join(os.tmpdir(), 'dsh-mkt-test-' + process.pid)
+const tmpHome = join(tmpBase, 'dsh')
 const profileDir = join(tmpHome, 'profiles', 'web')
 
 function fmtBytes(n) {
@@ -25,7 +30,7 @@ function fmtBytes(n) {
 }
 
 function setupProfile() {
-  rmSync(join(ws, '.test-tmp'), { recursive: true, force: true })
+  rmSync(tmpBase, { recursive: true, force: true })
   mkdirSync(profileDir, { recursive: true })
   writeFileSync(join(profileDir, 'package.json'), JSON.stringify({
     name: 'dsh-profile-web-test',
@@ -40,15 +45,16 @@ function setupProfile() {
 }
 
 function makeFixture() {
-  const dir = join(ws, '.test-tmp', 'fixture-plugin')
+  const dir = join(tmpBase, 'fixture-plugin')
   mkdirSync(join(dir, 'lib'), { recursive: true })
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
     name: 'test-fixture-plugin',
     version: '1.0.0',
     main: 'lib/index.js',
-    dsh: { client: { platform: 'web' } },
+    dsh: { bundle: { patch: './cordis.patch.yml' } },
   }, null, 2))
-  writeFileSync(join(dir, 'lib', 'index.js'), 'module.exports = { apply() {} }\n')
+  writeFileSync(join(dir, 'lib', 'index.js'), 'export default { inject: [], apply() {} }\n')
+  writeFileSync(join(dir, 'cordis.patch.yml'), '')
   return dir
 }
 
@@ -104,8 +110,8 @@ if (mode === 'cancel') {
   const dir = makeFixture()
   const started = _market.startInstall(dir)
   const job = started.job
-  // Let it start, then cancel quickly.
-  await new Promise((r) => setTimeout(r, 1500))
+  // Cancel immediately while the job is still queued/running (the fixture
+  // installs in <1s, so there is no window to cancel it after it starts).
   const canc = await _market.cancelJob(job)
   const result = await job.result
   console.log('=== CANCEL ===')
@@ -113,6 +119,52 @@ if (mode === 'cancel') {
   console.log('final:', JSON.stringify({ ok: result.ok, phase: result.phase, error: result.error }))
   const ok = result.ok === false && result.phase === 'canceled'
   console.log(ok ? 'PASS cancel' : 'FAIL cancel')
+  process.exit(ok ? 0 : 1)
+}
+
+if (mode === 'workspace-check') {
+  // profileInstallError: without pnpm-workspace.yaml install must be refused
+  // with a friendly message; with it, a job must start.
+  rmSync(tmpBase, { recursive: true, force: true })
+  mkdirSync(profileDir, { recursive: true })
+  writeFileSync(join(profileDir, 'package.json'), JSON.stringify({ name: 'dsh-profile-web-test', private: true, dsh: { profile: { bundles: [] } }, dependencies: {} }))
+  const r1 = _market.startInstall('github:foo/bar')
+  console.log('=== WORKSPACE CHECK ===')
+  console.log('no pnpm-workspace.yaml → error:', r1.error)
+  const ok1 = !!r1.error && /pnpm-workspace\.yaml/.test(r1.error)
+  writeFileSync(join(profileDir, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
+  const r2 = _market.startInstall('github:foo/bar')
+  console.log('with pnpm-workspace.yaml → job:', !!r2.job, '| error:', r2.error || null)
+  const ok2 = !!r2.job && !r2.error
+  if (r2.job) await _market.cancelJob(r2.job) // never actually install
+  const ok = ok1 && ok2
+  console.log(ok ? 'PASS workspace check' : 'FAIL workspace check')
+  process.exit(ok ? 0 : 1)
+}
+
+if (mode === 'monorepo') {
+  setupProfile()
+  const started = _market.startInstall('Lum1104/dsh-browser')
+  if (started.error) throw new Error('startInstall monorepo error: ' + started.error)
+  const job = started.job
+  let last = null
+  let lastStep = null
+  const timer = setInterval(() => {
+    last = _market.snapshotOf(job)
+    if (last.step !== lastStep) { lastStep = last.step; console.log('  step:', last.step, '| phase:', last.phase) }
+  }, 1000)
+  const result = await job.result
+  clearInterval(timer)
+  console.log('=== MONOREPO INSTALL (real dsh-browser) ===')
+  console.log('final:', JSON.stringify({ ok: result.ok, phase: result.phase, installed: result.installed, error: result.error }))
+  // verify final profile state
+  const manifest = JSON.parse(readFileSync(join(profileDir, 'package.json'), 'utf8'))
+  const bundles = manifest.dsh?.profile?.bundles || []
+  const depName = '@deepseek-ai/dsh-bridge-browser'
+  const mainExists = existsSync(join(profileDir, 'node_modules', depName, 'lib', 'index.js'))
+  console.log('in bundles:', bundles.includes(depName), '| main exists:', mainExists)
+  const ok = result.ok === true && result.phase === 'done' && bundles.includes(depName) && mainExists
+  console.log(ok ? 'PASS monorepo install' : 'FAIL monorepo install')
   process.exit(ok ? 0 : 1)
 }
 

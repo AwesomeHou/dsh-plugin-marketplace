@@ -10,21 +10,26 @@ import plugin from '../lib/index.js'
 import { _market } from '../lib/index.js'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import os from 'node:os'
 import { dirname, join } from 'node:path'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const ws = join(here, '..')
-const tmpHome = join(ws, '.test-tmp', 'dsh')
+// SPACE-FREE base (see install-flow.test.mjs): local fixture paths must not
+// contain spaces or `dsh plugin add` mangles them.
+const tmpBase = join(os.tmpdir(), 'dsh-mkt-http-' + process.pid)
+const tmpHome = join(tmpBase, 'dsh')
 const profileDir = join(tmpHome, 'profiles', 'web')
 
-rmSync(join(ws, '.test-tmp'), { recursive: true, force: true })
+rmSync(tmpBase, { recursive: true, force: true })
 mkdirSync(profileDir, { recursive: true })
 writeFileSync(join(profileDir, 'package.json'), JSON.stringify({ name: 'dsh-profile-web-test', private: true, dsh: { profile: { bundles: [] } }, dependencies: {} }))
 writeFileSync(join(profileDir, 'pnpm-workspace.yaml'), 'packages:\n  - .\n\nnodeLinker: hoisted\nautoInstallPeers: false\n')
-const fix = join(ws, '.test-tmp', 'fixture-plugin')
+const fix = join(tmpBase, 'fixture-plugin')
 mkdirSync(join(fix, 'lib'), { recursive: true })
-writeFileSync(join(fix, 'package.json'), JSON.stringify({ name: 'test-fixture-plugin', version: '1.0.0', main: 'lib/index.js', dsh: { client: { platform: 'web' } } }))
-writeFileSync(join(fix, 'lib', 'index.js'), 'module.exports={apply(){}}')
+writeFileSync(join(fix, 'package.json'), JSON.stringify({ name: 'test-fixture-plugin', version: '1.0.0', main: 'lib/index.js', dsh: { bundle: { patch: './cordis.patch.yml' } } }))
+writeFileSync(join(fix, 'lib', 'index.js'), 'export default { inject: [], apply() {} }')
+writeFileSync(join(fix, 'cordis.patch.yml'), '')
 process.env.DSH_HOME = tmpHome
 
 // ── fake cordis ctx ──────────────────────────────────────────────────────
@@ -88,24 +93,39 @@ console.log('final status:', JSON.stringify({ phase: last.phase, percent: last.p
 if (!last.done || !last.ok || last.phase !== 'done' || last.percent !== 100) throw new Error('install did not finish ok')
 if (!sawProgress) throw new Error('no progress percent observed')
 
-// ── cancel a second install ──────────────────────────────────────────────
-const res2 = fakeRes()
-await installRoute.handler(fakePost({ spec: fix }), res2)
-const jobId2 = JSON.parse(res2.body).jobId
-await new Promise((r) => setTimeout(r, 1200))
-const resC = fakeRes()
-await cancelRoute.handler(fakePost({ jobId: jobId2 }), resC)
-console.log('cancel response:', JSON.parse(resC.body))
-let canceled = false
-for (let i = 0; i < 20; i++) {
-  await new Promise((r) => setTimeout(r, 300))
+// ── cancel a queued install ──────────────────────────────────────────────
+// Start TWO installs back-to-back; the second is queued behind the first.
+// Cancel the second immediately — since it is still queued, the executeJob
+// cancel-guard must turn it into a clean 'canceled' (never run).
+async function startJobViaHttp(spec) {
   const res = fakeRes()
-  await statusRoute.handler({ method: 'GET', url: '/api/market/install/status?job=' + encodeURIComponent(jobId2) }, res)
+  await installRoute.handler(fakePost({ spec }), res)
   const body = JSON.parse(res.body)
-  if (body.job.done) { canceled = body.job.phase === 'canceled'; break }
+  if (body.status === 202 || body.ok) return body.jobId
+  return body.jobId
 }
-console.log('canceled:', canceled)
-if (!canceled) throw new Error('second install was not canceled')
+async function statusJob(jobId) {
+  const res = fakeRes()
+  await statusRoute.handler({ method: 'GET', url: '/api/market/install/status?job=' + encodeURIComponent(jobId) }, res)
+  return JSON.parse(res.body).job
+}
+const jobB = await startJobViaHttp(fix)
+const jobC = await startJobViaHttp(fix)
+const resC = fakeRes()
+await cancelRoute.handler(fakePost({ jobId: jobC }), resC)
+console.log('cancel response:', JSON.parse(resC.body))
+let bDone = false, cCanceled = false
+for (let i = 0; i < 30; i++) {
+  await new Promise((r) => setTimeout(r, 300))
+  const b = await statusJob(jobB)
+  const c = await statusJob(jobC)
+  if (b.done && b.ok) bDone = true
+  if (c.done && c.phase === 'canceled') cCanceled = true
+  if (bDone && cCanceled) break
+}
+console.log('jobB done ok:', bDone, '| jobC canceled:', cCanceled)
+if (!bDone) throw new Error('first queued install did not finish ok')
+if (!cCanceled) throw new Error('second queued install was not canceled')
 
 console.log('PASS http flow')
 process.exit(0)

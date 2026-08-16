@@ -21,7 +21,9 @@
   - `market_install(spec)` — 通过 `dsh plugin --profile web add -w <spec>` 安装到 `web` profile。执行前会校验 spec 是否含 shell 元字符；完成后提示需要重启 harness。
   - `market_installed()` — 列出 `web` profile 已安装的**第三方**插件：启用状态、当前版本、最新版本与是否可更新（含市场自身的更新状态）。内置插件不在此列。
   - `market_update(name)` — 把某个已安装插件更新到最新版本（需重启 harness 生效）。
-- **一键安装（异步 + 进度条）** — 每个插件卡片都有 **安装** 按钮，POST `/api/market/install` 立刻返回 `{ jobId }`（不阻塞 Web 服务），浏览器轮询 `GET /api/market/install/status?job=<id>`，卡片上实时渲染**应用商店式进度条**：阶段（解析依赖 → 下载中 → 正在安装 → 完成 / 失败 / 已取消）、百分比、已下载大小、实时下载速度、ETA 与最近日志；支持 `POST /api/market/install/cancel` 取消。安装/更新任务异步串行执行，进程树可被可靠终止（Windows `taskkill /T /F`），并有 10 分钟硬超时兜底——彻底解决旧版 `spawnSync` 阻塞事件循环、超时杀不掉进程树导致"安装中…"永久卡死的问题。
+- **安装（默认：直装）** — 每个插件卡片都有 **安装** 按钮，点击后通过 `POST /api/market/install` 启动**确定性的异步安装任务**：host 侧 `planInstall` 先探测仓库形态——根 `package.json` 声明了 `dsh.bundle`/`dsh.client` 就走标准 `dsh plugin add`；否则按 monorepo/workspace 处理（克隆到 `$DSH_HOME/marketplace-src`、corepack pnpm 构建、`link:` 注册）。安装后做**真实结果校验**（插件必须进入 `dsh.profile.bundles` 且入口文件存在），误装成普通依赖会自动回滚并改走 workspace 路径。卡片内联渲染 App Store 式进度条（阶段 / 百分比 / 已下载 / 速度 / ETA / 实时日志），可取消。
+- **workspace 缺失的友好报错** — host 侧在安装/更新前检查 web profile：`package.json` 或 `pnpm-workspace.yaml` 缺失时，`market_install` / `/api/market/install` 会返回可操作的错误信息（告诉用户如何创建 `pnpm-workspace.yaml` 或重新初始化 profile），而不是 pnpm 那种晦涩的 `--workspace-root may only be used inside a workspace`。
+- **agent 安装方案（已隐藏，代码保留）** — 之前的 agent 路径（点击后经 `session.prompt` 把固定提示词发给当前会话的 agent，由它读 README 并自行决定安装方式）**代码完整保留在 `lib/client.js` 的 `installViaAgent` 中，前端暂不接入**，作为直装覆盖不了的“非标准结构”仓库的兼容兜底，后续可再决定恢复。更新/关闭/卸载仍走 host 接口（`/api/market/update` 等）。
 - **更新插件（有新版本提示）** — 每个已安装插件都会对照最新版本（npm registry 的 `latest`，或 GitHub 默认分支 `package.json` 的 `version`，GitHub 插件优先）。有新版本时在卡片上标 **可更新** 并给 **更新** 按钮（`/api/market/update`）。
 - **区分内置 / 后安装** — `dsh.profile.bundles` 里来自 profile 模板的包是**内置**插件（随 harness 提供，不能关闭 / 卸载），`dependencies` 里的是**后安装**插件。**已安装**标签页只展示后安装（第三方）插件，内置插件不列出（页面顶部有声明）。
 - **后安装插件可关闭 / 卸载** — **关闭 / 启用**（`/api/market/set-enabled`）通过把它移出 / 移回 `dsh.profile.bundles` 实现（依赖保留）；**卸载**（`/api/market/uninstall`）通过 `dsh plugin --profile web remove <name>` 移除依赖并自动从 bundle 层摘除。两者都需重启 harness。
