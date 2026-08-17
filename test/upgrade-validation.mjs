@@ -5,7 +5,7 @@
  *  3) planInstall npm-preference for the 4 test plugins.
  *  4) install-test all 4 plugins on a THROWAWAY profile via _market.startInstall.
  */
-import { _market } from './lib/index.js'
+import { _market } from '../lib/index.js'
 import { existsSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs'
 import os from 'node:os'
 import { join } from 'node:path'
