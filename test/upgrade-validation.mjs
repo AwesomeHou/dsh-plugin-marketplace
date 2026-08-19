@@ -18,6 +18,8 @@ console.log('\n=== 1) classifyPnpmFailure ===')
 const samples = [
   ['ERR_PNPM_VIRTUAL_STORE_DIR_MAX_LENGTH_DIFF This modules directory was created using a different virtual-store-dir-max-length value', 'hoist-pattern-diff'],
   ['ERR_PNPM_PUBLIC_HOIST_PATTERN_DIFF modules dir was built by a different pnpm major', 'hoist-pattern-diff'],
+  ['ERR_PNPM_UNEXPECTED_STORE The dependencies at "C:\\Users\\Administrator\\.dsh\\profiles\\web\\node_modules" are currently linked from the store at "C:\\Users\\.pnpm-store\\v10". pnpm now wants to use the store at "C:\\Users\\Administrator\\AppData\\Local\\pnpm\\store\\v10"', 'unexpected-store'],
+  ['ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY Aborted removal of modules directory due to no TTY', 'unexpected-store'],
   ['ERR_PNPM_NO_MATCHING_VERSION  No matching version found for @deepseek-ai/dsh-llm@>=0.1.0 <0.2.0', 'peer-resolution'],
   ['ERR_PNPM_IGNORED_BUILDS  Ignored build scripts: node-pty, koffi.', 'ignored-builds'],
   ['ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED  The git-hosted package "dsh-better-sidebar@2.8.0" needs to execute build scripts', 'git-prepare-not-allowed'],
