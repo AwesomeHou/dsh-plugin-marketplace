@@ -23,7 +23,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "check": "node --check lib/index.js && node --check lib/client.js"
+    "check": "node --check lib/index.js && node --check lib/client.js",
+    "build": "node scripts/build-client.mjs"
   },
   "dsh": {
     "bundle": {
