@@ -26,7 +26,7 @@
 - **安装卡住自动止损** — pnpm / git 在死网络或过慢的下载上可能**零输出挂死**（例如 GitHub 暂不可达时停在"正在解析依赖… 8%"）。host 侧带**停滞看门狗**：一段时间（默认 120s，可用 `DSH_MARKET_STALL_MS` 覆盖）没有任何进度（无输出行、无字节增长）就杀掉进程树 → 自动**直连重试一次**（去掉字节统计代理）→ 若再次停滞则**快速失败**并提示「检查网络后重试，或改用「让 agent 安装」」，不再无限转圈等到 10 分钟超时。
 - **对等依赖失败识别** — 若插件声明了 `@deepseek-ai/*@^0.1.0-rc.6` 这类**预发布对等依赖**，`dsh plugin add` 可能以 `ERR_PNPM_NO_MATCHING_VERSION` 退出。host 侧会识别并给出**可操作的说明**（而不是裸的 "exit 1"），卡片同时提供 **「让 agent 安装」** 兜底按钮——agent 会按仓库 README / 安装脚本处理这类结构。
 - **workspace 缺失的友好报错** — host 侧在安装/更新前检查 web profile：`package.json` 或 `pnpm-workspace.yaml` 缺失时，`market_install` / `/api/market/install` 会返回可操作的错误信息（告诉用户如何创建 `pnpm-workspace.yaml` 或重新初始化 profile），而不是 pnpm 那种晦涩的 `--workspace-root may only be used inside a workspace`。
-- **agent 安装方案（兜底，专属工作区新开对话）** — 当直装失败时（尤其对等依赖 / 非标准结构场景），卡片上会出现 **「让 agent 安装」** 按钮。点击后 host 会确保一个**专属安装工作区**（`$DSH_HOME/marketplace-install`，经 `GET /api/market/install-workspace` 暴露），client 通过 runtime 的 `workspaces.create` / `sessions.create` / `sessions.open` 在该工作区**新开一个对话**并切过去，再把固定提示词 `session.prompt` 发给那个会话——由 agent 读 README 并自行决定安装方式，**不污染当前会话、无需手动选工作区**。若 runtime 服务不可用则回退为发给当前会话。代码在 `src/client/index.js` 的 `installViaAgent`。更新/关闭/卸载仍走 host 接口（`/api/market/update` 等）。
+- **agent 安装方案（兜底，专属工作区新开对话）** — 当直装失败时（尤其对等依赖 / 非标准结构场景），卡片上会出现 **「让 agent 安装」** 按钮。点击后 host 会确保一个**专属安装工作区**（`$DSH_HOME/marketplace-install`，经 `GET /api/market/install-workspace` 暴露），client 通过 runtime 的 `workspaces.create` / `sessions.create` / `sessions.open` 在该工作区**新开一个对话**并切过去，再把固定提示词 `session.prompt` 发给那个会话——由 agent 读 README 并自行决定安装方式，**不污染当前会话、无需手动选工作区**。若 runtime 服务不可用则回退为发给当前会话。代码在 `lib/client.js` 的 `installViaAgent`。更新/关闭/卸载仍走 host 接口（`/api/market/update` 等）。
 - **更新插件（有新版本提示）** — 每个已安装插件都会对照最新版本（npm registry 的 `latest`，或 GitHub 默认分支 `package.json` 的 `version`，GitHub 插件优先）。有新版本时在卡片上标 **可更新** 并给 **更新** 按钮（`/api/market/update`）。
 - **区分内置 / 后安装** — `dsh.profile.bundles` 里来自 profile 模板的包是**内置**插件（随 harness 提供，不能关闭 / 卸载），`dependencies` 里的是**后安装**插件。**已安装**标签页只展示后安装（第三方）插件，内置插件不列出（页面顶部有声明）。
 - **后安装插件可停用 / 卸载** — **停用 / 启用**（`/api/market/set-enabled`）通过把它移出 / 移回 `dsh.profile.bundles` 实现（依赖保留）；**卸载**（`/api/market/uninstall`）通过 `dsh plugin --profile web remove <name>` 移除依赖并自动从 bundle 层摘除。两者都需重启 harness。
@@ -56,23 +56,19 @@ dsh plugin --profile web add https://github.com/AwesomeHou/dsh-plugin-marketplac
 |---|---|---|
 | Bundle 清单 | `package.json` | 声明 `dsh.bundle.patch`（host 层）+ `dsh.client`（浏览器模块） |
 | Patch 层 | `cordis.patch.yml` | 把插件自己的 host 行插入 Loader 树 |
-| Host 半 | `lib/index.js` | 手工维护的 bundle（无 `src` 源）：GitHub 分页同步 + `/api/market/list`、`/api/market/install`（异步任务）、`/api/market/install/status`、`/api/market/install/cancel`、`/api/market/installed`、`/api/market/update`、`/api/market/set-enabled`、`/api/market/uninstall` + `market_search`/`market_install`/`market_installed`/`market_update` 工具 |
-| Client 源码 | `src/client/index.js` + `src/client/locales.js` | 浏览器半的源：两个设置标签页 + 搜索 + 一键安装 + 更新 / 停用 / 启用 / 卸载 + 市场自更新横幅；字符串经 `ctx.locale` 字典（`locales.js` 含 `zh`/`en` 双语），UI 文案不再硬编码 |
-| Client bundle | `lib/client.js` | **由 tsdown 从 `src/client/` 生成**（`__ModuleLoader__` bundle），git 中不跟踪（`.gitignore`）；安装时 `prepare` 自动构建 |
+| Host 半 | `lib/index.js` | 手工维护的 bundle：GitHub 分页同步 + `/api/market/list`、`/api/market/install`（异步任务）、`/api/market/install/status`、`/api/market/install/cancel`、`/api/market/installed`、`/api/market/update`、`/api/market/set-enabled`、`/api/market/uninstall` + `market_search`/`market_install`/`market_installed`/`market_update` 工具 |
+| Client 半 | `lib/client.js` | 手工维护的 `__ModuleLoader__` bundle：两个设置标签页 + 搜索 + 一键安装 + 更新 / 停用 / 启用 / 卸载 + 市场自更新横幅。UI 文案在文件内的 `MARKET_LOCALES` 字典（`zh`/`en` 双语）中，经 `ctx.locale` 解析，无硬编码；随仓库提交，无需安装时构建 |
 
 数据走 Host 半在 `ctx.webServer` 上注册的同源 HTTP 端点（`/api/market/*`）——永久插件没有 `harness`/`host.call` 沙箱 RPC，所以浏览器半用 `fetch`。
 
 ## 开发
 
 ```sh
-npm install             # 安装 devDependencies（tsdown）
-npm run build           # tsdown 从 src/client/ 生成 lib/client.js
 npm run check           # 语法检查两个半（lib/index.js、lib/client.js）
 ```
 
-- `lib/client.js` 与 sourcemap 是构建产物（`.gitignore` 忽略，不进 git）；`prepare` 会在 git 安装时自动执行 `build`。
-- `lib/index.js`（Host 半）为手工维护的 bundle，无源文件，始终随仓库提交。
-- UI 文案位于 `src/client/locales.js`（`zh`/`en` 字典），改动后需 `npm run build` 重新生成 bundle。
+- 两个半都是**手工维护的 bundle**，直接随仓库提交（git 安装无需构建步骤，不会有 `prepare` 脚本）。
+- UI 文案位于 `lib/client.js` 内的 `MARKET_LOCALES` 字典（`zh`/`en`），改动后直接编辑该文件即可。
 
 ## License
 
