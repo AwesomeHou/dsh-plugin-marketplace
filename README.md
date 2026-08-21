@@ -57,7 +57,7 @@ dsh plugin --profile web add https://github.com/AwesomeHou/dsh-plugin-marketplac
 | Bundle 清单 | `package.json` | 声明 `dsh.bundle.patch`（host 层）+ `dsh.client`（浏览器模块） |
 | Patch 层 | `cordis.patch.yml` | 把插件自己的 host 行插入 Loader 树 |
 | Host 半 | `lib/index.js` | GitHub 分页同步 + `/api/market/list`、`/api/market/install`（异步任务）、`/api/market/install/status`、`/api/market/install/cancel`、`/api/market/installed`、`/api/market/update`、`/api/market/set-enabled`、`/api/market/uninstall` + `market_search`/`market_install`/`market_installed`/`market_update` 工具 |
-| Client 半 | `lib/client.js` | `__ModuleLoader__` bundle：`插件市场` / `已安装` 两个设置标签页 + 搜索 + 加载更多 + 一键安装（带进度条/速度/大小/阶段/取消）+ 更新 / 停用 / 启用 / 卸载 + 市场自更新横幅 |
+| Client 半 | `lib/client.js` | `__ModuleLoader__` bundle：`插件市场` / `已安装` 两个设置标签页 + 搜索 + 加载更多 + 一键安装（带进度条/速度/大小/阶段/取消）+ 更新 / 停用 / 启用 / 卸载 + 市场自更新横幅。UI 文案在 `MARKET_LOCALES` 字典（`zh`/`en`），经 `ctx.locale` 解析 |
 
 数据走 Host 半在 `ctx.webServer` 上注册的同源 HTTP 端点（`/api/market/*`）——永久插件没有 `harness`/`host.call` 沙箱 RPC，所以浏览器半用 `fetch`。
 

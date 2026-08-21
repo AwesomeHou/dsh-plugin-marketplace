@@ -84,7 +84,7 @@ Install this plugin for me: https://github.com/AwesomeHou/dsh-plugin-marketplace
 | Bundle manifest | `package.json` | `dsh.bundle.patch` (host layer) + `dsh.client` (browser module) |
 | Patch layer | `cordis.patch.yml` | Inserts the plugin's own host row into the Loader tree |
 | Host half | `lib/index.js` | GitHub paginated sync + `/api/market/list`, `/api/market/installed`, `/api/market/update`, `/api/market/set-enabled`, `/api/market/uninstall` + `market_search`/`market_install`/`market_installed`/`market_update` tools |
-| Client half | `lib/client.js` | `__ModuleLoader__` bundle: `插件市场` / `已安装` settings tabs + search + load-more + one-click install + update / disable / enable / uninstall + self-update banner |
+| Client half | `lib/client.js` | `__ModuleLoader__` bundle: `插件市场` / `已安装` settings tabs + search + load-more + one-click install + update / disable / enable / uninstall + self-update banner. UI copy lives in the `MARKET_LOCALES` dictionary (`zh`/`en`), resolved via `ctx.locale` |
 
 Data flows over the same-origin HTTP endpoints (`/api/market/*`) the Host
 half registers on `ctx.webServer` — permanent bundles have no
