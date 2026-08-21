@@ -83,8 +83,8 @@ Install this plugin for me: https://github.com/AwesomeHou/dsh-plugin-marketplace
 |---|---|---|
 | Bundle manifest | `package.json` | `dsh.bundle.patch` (host layer) + `dsh.client` (browser module) |
 | Patch layer | `cordis.patch.yml` | Inserts the plugin's own host row into the Loader tree |
-| Host half | `lib/index.js` | Hand-maintained bundle: GitHub paginated sync + `/api/market/list`, `/api/market/installed`, `/api/market/update`, `/api/market/set-enabled`, `/api/market/uninstall` + `market_search`/`market_install`/`market_installed`/`market_update` tools |
-| Client half | `lib/client.js` | Hand-maintained `__ModuleLoader__` bundle: the two settings tabs + search + one-click install + update / disable / enable / uninstall + self-update banner. UI copy lives in the file's `MARKET_LOCALES` dictionary (`zh`/`en`), resolved via `ctx.locale` — no hardcoded strings. Committed to the repo, so no build step is needed at install time |
+| Host half | `lib/index.js` | GitHub paginated sync + `/api/market/list`, `/api/market/installed`, `/api/market/update`, `/api/market/set-enabled`, `/api/market/uninstall` + `market_search`/`market_install`/`market_installed`/`market_update` tools |
+| Client half | `lib/client.js` | `__ModuleLoader__` bundle: `插件市场` / `已安装` settings tabs + search + load-more + one-click install + update / disable / enable / uninstall + self-update banner. UI copy lives in the `MARKET_LOCALES` dictionary (`zh`/`en`), resolved via `ctx.locale` |
 
 Data flows over the same-origin HTTP endpoints (`/api/market/*`) the Host
 half registers on `ctx.webServer` — permanent bundles have no
@@ -93,13 +93,8 @@ half registers on `ctx.webServer` — permanent bundles have no
 ## Development
 
 ```sh
-npm run check           # syntax-check both halves (lib/index.js, lib/client.js)
+npm run check   # syntax-check both halves
 ```
-
-- Both halves are **hand-maintained bundles** committed directly to the repo
-  (no build step at git install time, no `prepare` script).
-- UI copy lives in the `MARKET_LOCALES` dictionary inside `lib/client.js`
-  (`zh`/`en`); edit that file directly.
 
 ## License
 
