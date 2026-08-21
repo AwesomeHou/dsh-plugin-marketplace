@@ -34,6 +34,8 @@
  * tagged with this plugin's id.
  */
 
+import MARKET_LOCALES from './locales.js'
+
     // CSS — injected once, tagged for the module system's style bookkeeping.
     var STYLE_TAG = 'dsh-plugin-marketplace/settings.css'
     if (typeof document !== 'undefined' && document.querySelector('style[data-plugin-css="' + STYLE_TAG + '"]') === null) {
@@ -767,6 +769,5 @@
       })
     }
 
-    exports.inject = inject
-    exports.apply = apply
+    export { inject, apply }
 

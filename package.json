@@ -23,8 +23,9 @@
     "LICENSE"
   ],
   "scripts": {
-    "check": "node --check lib/index.js && node --check lib/client.js",
-    "build": "node scripts/build-client.mjs"
+    "build": "tsdown",
+    "prepare": "pnpm run build",
+    "check": "node --check lib/index.js && node --check lib/client.js"
   },
   "dsh": {
     "bundle": {
@@ -40,5 +41,8 @@
     "plugin-marketplace",
     "deepseek-harness"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "tsdown": "^0.22.14"
+  }
 }
