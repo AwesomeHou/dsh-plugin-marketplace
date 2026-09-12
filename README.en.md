@@ -46,11 +46,25 @@ tools so the agent itself can search and install plugins.
   disabled/uninstalled); packages later added to `dependencies` are
   **user-installed**. The **已安装** tab lists only user-installed
   (third-party) plugins — built-ins are not shown, and the page states this.
-- **Disable / uninstall user-installed plugins** — **关闭 / 启用** (via
+- **Disable / uninstall user-installed plugins** — **停用 / 启用** (via
   `/api/market/set-enabled`) toggles the plugin in/out of `dsh.profile.bundles`
   (the dependency is kept); **卸载** (via `/api/market/uninstall`) runs
   `dsh plugin --profile web remove <name>` and drops it from the bundle layer
   list. Both need a harness restart.
+- **Profile writes are serialized (batch uninstalls just work)** — install,
+  update, uninstall and disable/enable all read-modify-write the same profile
+  `package.json` (and the same `node_modules`), so the host funnels every one of
+  them through a single FIFO (`onProfileWrite`). Previously two concurrent
+  **卸载** runs each read the old manifest and the last write restored the other
+  plugin's dependency — which is why "uninstall several at once" removed only
+  one. They now run one after the next and **every one of the batch is really
+  removed**; a repeat/overlapping uninstall of the same plugin is an idempotent
+  no-op, while a built-in is still refused with `内置插件不能卸载`.
+- **One button while an action runs** — while a plugin is being acted on, its
+  card keeps **only that one button**, relabelled **更新中… / 停用中… / 启用中…
+  / 卸载中…**, and hides the siblings instead of turning them into a generic
+  "Processing…" button. A disabled plugin is tagged **已停用** (previously
+  "已关闭").
 - **Self-update check** — the marketplace checks its own latest version (read
   from its GitHub repo's `package.json`). When a new version exists, a banner
   `vX → vY · 立即更新` appears at the top of both the 插件市场 and 已安装 tabs.
